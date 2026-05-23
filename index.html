@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FlashCard App</title>
+<link rel="stylesheet" href="style.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- ░░ NAVBAR ░░ -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <span class="brand-icon">🧠</span>
+    <span class="brand-name">Flash<em>Card</em></span>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="tab-home"  onclick="goto('home')">🏠 Dashboard</button>
+    <button class="nav-tab"        id="tab-decks" onclick="goto('decks')">📚 Decks</button>
+    <button class="nav-tab"        id="tab-study" onclick="goto('study')">🃏 Study</button>
+  </div>
+  <div class="nav-badge" onclick="toggleApiLog()" title="Click to see API calls">
+    <span class="badge-dot"></span>
+    <span class="badge-text">Python · Port 5000</span>
+  </div>
+</nav>
+
+<!-- ░░ VIEWS ░░ -->
+<div id="app">
+
+  <!-- ── HOME / DASHBOARD ── -->
+  <section class="view active" id="view-home">
+    <div class="page-wrap">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-sub">Your study overview — fetched live from Python backend</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-outline" onclick="goto('decks')">Manage Decks</button>
+          <button class="btn btn-primary" onclick="goto('study')">▶ Start Studying</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="home-stats">
+        <div class="stat-card loading"><div class="spin"></div></div>
+        <div class="stat-card loading"></div>
+        <div class="stat-card loading"></div>
+        <div class="stat-card loading"></div>
+      </div>
+
+      <!-- Deck cards -->
+      <h2 class="section-title">My Decks</h2>
+      <div class="deck-grid" id="home-decks">
+        <div class="loading-row">Loading decks from API…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── DECKS ── -->
+  <section class="view" id="view-decks">
+    <div class="page-wrap">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">My Decks</h1>
+          <p class="page-sub">Create and manage your flashcard decks & cards</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-outline" onclick="openCardModal()">＋ Card</button>
+          <button class="btn btn-primary" onclick="openDeckModal()">＋ New Deck</button>
+        </div>
+      </div>
+
+      <div class="deck-grid" id="decks-grid"></div>
+
+      <div class="table-head">
+        <h2 class="section-title">All Cards</h2>
+        <div class="filter-row">
+          <div id="deck-chips"></div>
+          <div class="status-chips">
+            <button class="chip active" data-s="all"   onclick="setStatusFilter('all',this)">All</button>
+            <button class="chip"        data-s="new"    onclick="setStatusFilter('new',this)">🆕 New</button>
+            <button class="chip"        data-s="again"  onclick="setStatusFilter('again',this)">↺ Again</button>
+            <button class="chip"        data-s="known"  onclick="setStatusFilter('known',this)">✓ Known</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cards-table" id="cards-table"></div>
+    </div>
+  </section>
+
+  <!-- ── STUDY ── -->
+  <section class="view" id="view-study">
+    <div class="study-layout">
+
+      <!-- Sidebar -->
+      <aside class="study-aside">
+        <p class="aside-label">DECKS</p>
+        <div id="aside-decks"></div>
+        <hr class="aside-hr"/>
+        <p class="aside-label">SESSION</p>
+        <div class="aside-stat"><span>✓ Know</span><strong id="sb-know">0</strong></div>
+        <div class="aside-stat"><span>↺ Again</span><strong id="sb-again">0</strong></div>
+        <div class="aside-stat"><span>Remaining</span><strong id="sb-rem">—</strong></div>
+        <hr class="aside-hr"/>
+        <p class="aside-label">OPTIONS</p>
+        <div class="aside-stat toggle-row" onclick="toggleShuffle()">
+          <span>Shuffle</span>
+          <span class="toggle-val" id="shuffle-val">OFF</span>
+        </div>
+      </aside>
+
+      <!-- Study content -->
+      <main class="study-main">
+
+        <!-- Initial prompt -->
+        <div class="mid-state" id="st-pick">
+          <div class="mid-icon">👈</div>
+          <h2>Pick a deck</h2>
+          <p>Choose a subject from the sidebar to begin studying</p>
+        </div>
+
+        <!-- No cards state -->
+        <div class="mid-state" id="st-empty" style="display:none">
+          <div class="mid-icon">🃏</div>
+          <h2>No cards yet</h2>
+          <p>Add cards to this deck first</p>
+          <button class="btn btn-primary mt16" onclick="goto('decks')">＋ Add Cards</button>
+        </div>
+
+        <!-- Active card area -->
+        <div class="card-area" id="st-card" style="display:none">
+
+          <p class="deck-label" id="deck-label">Deck Name</p>
+
+          <!-- Progress -->
+          <div class="prog-wrap">
+            <div class="prog-info">
+              <span id="prog-text">1 / 0</span>
+              <span id="prog-pct">0%</span>
+            </div>
+            <div class="prog-track"><div class="prog-bar" id="prog-bar" style="width:0%"></div></div>
+          </div>
+
+          <!-- Dots -->
+          <div class="dots-row" id="dots-row"></div>
+
+          <!-- 3D Flashcard -->
+          <div class="fc-scene" onclick="flipCard()">
+            <div class="fc" id="flashcard">
+              <div class="fc-face fc-front">
+                <span class="fc-label">QUESTION</span>
+                <span class="fc-tag" id="fc-tag-f">Tag</span>
+                <p class="fc-q" id="fc-q">—</p>
+                <span class="fc-hint">Click or press <kbd>Space</kbd> to reveal answer</span>
+              </div>
+              <div class="fc-face fc-back">
+                <span class="fc-label fc-label-back">ANSWER</span>
+                <span class="fc-tag fc-tag-back" id="fc-tag-b">Tag</span>
+                <p class="fc-a" id="fc-a">—</p>
+                <span class="fc-hint fc-hint-back">Rate yourself below</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div class="study-controls">
+            <button class="sc-btn sc-skip"  onclick="skipCard()">→ Skip</button>
+            <button class="sc-btn sc-again" id="sc-again" onclick="rateCard('again')" disabled>✗ Again</button>
+            <button class="sc-btn sc-know"  id="sc-know"  onclick="rateCard('know')"  disabled>✓ Got It</button>
+          </div>
+
+          <!-- Session live count -->
+          <div class="sess-row">
+            <span class="sess-know">✓ <strong id="sess-know">0</strong></span>
+            <span class="sess-again">✗ <strong id="sess-again">0</strong></span>
+            <span class="sess-left">Left: <strong id="sess-left">0</strong></span>
+          </div>
+
+          <!-- Keyboard hints -->
+          <div class="kbd-row">
+            <span><kbd>Space</kbd> Flip</span>
+            <span><kbd>K</kbd> Got it</span>
+            <span><kbd>L</kbd> Again</span>
+            <span><kbd>→</kbd> Skip</span>
+          </div>
+        </div>
+
+        <!-- Completion -->
+        <div class="completion" id="st-done" style="display:none">
+          <div class="comp-icon" id="comp-icon">🎉</div>
+          <h2 class="comp-title" id="comp-title">Round Complete!</h2>
+          <p class="comp-sub" id="comp-sub"></p>
+          <div class="result-bars">
+            <div class="rbar">
+              <div class="rbar-label"><span>✓ Got It</span><span id="rb-know-val">0/0</span></div>
+              <div class="rbar-track"><div class="rbar-fill rbar-green" id="rb-know" style="width:0%"></div></div>
+            </div>
+            <div class="rbar">
+              <div class="rbar-label"><span>↺ Again</span><span id="rb-again-val">0/0</span></div>
+              <div class="rbar-track"><div class="rbar-fill rbar-red" id="rb-again" style="width:0%"></div></div>
+            </div>
+          </div>
+          <div class="comp-btns">
+            <button class="btn btn-outline" onclick="goto('decks')">📚 Decks</button>
+            <button class="btn btn-outline" onclick="restartStudy()">↺ Retry All</button>
+            <button class="btn btn-primary" onclick="retryWrong()">🔄 Review Wrong</button>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </section>
+</div>
+
+<!-- ░░ DECK MODAL ░░ -->
+<div class="overlay" id="deck-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 class="modal-title" id="dm-title">New Deck</h3>
+      <button class="modal-close" onclick="closeDeckModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Deck Name *</label><input id="dm-name" type="text" placeholder="e.g. Computer Networks, DBMS…"/></div>
+      <div class="field"><label>Icon</label><div class="emoji-grid" id="dm-emoji-grid"></div></div>
+      <div class="field"><label>Color</label><div class="color-row" id="dm-color-row"></div></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeDeckModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveDeck()">Save Deck</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ░░ CARD MODAL ░░ -->
+<div class="overlay" id="card-overlay">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h3 class="modal-title" id="cm-title">Add Card</h3>
+      <button class="modal-close" onclick="closeCardModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Deck *</label><select id="cm-deck"></select></div>
+      <div class="field-row">
+        <div class="field"><label>Question (Front) *</label><textarea id="cm-q" placeholder="e.g. What is a Semaphore?"></textarea></div>
+        <div class="field"><label>Answer (Back) *</label><textarea id="cm-a" placeholder="e.g. A sync primitive used to control…"></textarea></div>
+      </div>
+      <div class="field"><label>Tag <small>(optional)</small></label><input id="cm-tag" type="text" placeholder="e.g. Chapter 3, Week 2"/></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeCardModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveCard()">Save Card</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ░░ API LOG ░░ -->
+<div class="api-log" id="api-log">
+  <div class="api-log-head">
+    <span>🐍 API Calls — Python Backend</span>
+    <button onclick="toggleApiLog()">✕</button>
+  </div>
+  <div class="api-log-body" id="api-log-body"></div>
+</div>
+
+<!-- ░░ TOAST ░░ -->
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
